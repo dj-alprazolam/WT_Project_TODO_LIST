@@ -1,12 +1,25 @@
-cmake_minimum_required(VERSION 3.30.0)
-project(WT_project VERSION 0.1.0 LANGUAGES C CXX)
+cmake_minimum_required(VERSION 3.30)
+project(todo_wt CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(WT_project main.cpp todo.cpp)
+find_package(Wt REQUIRED COMPONENTS 
+    Wt 
+    HTTP 
+    Dbo              
+    DboSqlite3       
+)
 
-target_link_libraries(WT_project PRIVATE
-    wt
-    wthttp
+add_executable(todo_wt 
+    main.cpp 
+    todo.cpp
+    data.hpp
+)
+
+target_link_libraries(todo_wt PRIVATE 
+    Wt::Wt 
+    Wt::HTTP 
+    Wt::Dbo 
+    Wt::DboSqlite3
 )
