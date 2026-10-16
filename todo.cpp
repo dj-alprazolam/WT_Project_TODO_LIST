@@ -93,12 +93,12 @@ void todo::loaddata(Wt::WStandardItemModel* model){
 
         auto checkitem = std::make_unique<Wt::WStandardItem>();
         checkitem->setCheckable(true);
-        checkitem->setCheckState(item->comple ? Wt::CheckState::Checked 
+        checkitem->setCheckState(item->getComple() ? Wt::CheckState::Checked 
                                                   : Wt::CheckState::Unchecked);
         checkitem->setData(item.id(), Wt::ItemDataRole::User);
         model->setItem(row, 0, std::move(checkitem));
 
-        auto textitem = std::make_unique<Wt::WStandardItem>(item->text);
+        auto textitem = std::make_unique<Wt::WStandardItem>(item->getText());
         textitem->setEditable(false);
         model->setItem(row, 1, std::move(textitem));
         }
@@ -108,8 +108,8 @@ void todo::addtask(const std::string& text, Wt::WStandardItemModel* model){
     Wt::Dbo::Transaction t(session_);
 
     auto item = std::make_unique<data>();
-    item->text=text;
-    item->comple = false;
+    item->setText(text);
+    item->setComple(false);
 
 
     Wt::Dbo::ptr<data> ptr = session_.add(std::move(item));
