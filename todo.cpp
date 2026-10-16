@@ -48,6 +48,25 @@ todo::todo(const Wt::WEnvironment& env) : Wt::WApplication(env),
     auto* table = root->addWidget(std::make_unique<Wt::WTableView>());
     table->addStyleClass("todo-table");
     table->setModel(model);
+    model->itemChanged().connect([this](Wt::WStandardItem *item)
+                                 {
+    if (item->column() == 1) {
+
+        auto* model = dynamic_cast<Wt::WStandardItemModel*>(item->model());
+        if (!model) return;
+
+        auto* idItem = model->item(item->row(), 0);
+        if (!idItem) return;
+
+        long long id = std::any_cast<long long>(
+            idItem->data(Wt::ItemDataRole::User));
+        if (id == 0) return;
+
+        std::string newText = item->text().toUTF8();
+        if (newText.empty()) return;
+
+        updateTask(id, newText);
+    } });
     table->setColumnWidth(0, Wt::WLength(40));
     table->setColumnWidth(1, Wt::WLength(400));
     table->setHeaderHeight(30);
@@ -99,7 +118,7 @@ void todo::loaddata(Wt::WStandardItemModel* model){
         model->setItem(row, 0, std::move(checkitem));
 
         auto textitem = std::make_unique<Wt::WStandardItem>(item->getText());
-        textitem->setEditable(false);
+        textitem->setEditable(true);
         model->setItem(row, 1, std::move(textitem));
         }
 }
@@ -126,8 +145,14 @@ void todo::addtask(const std::string& text, Wt::WStandardItemModel* model){
     model->setItem(row,0,std::move(checkitem));
 
     auto textitem = std::make_unique<Wt::WStandardItem>(text);
-    textitem->setEditable(false);
+    textitem->setEditable(true);
     model->setItem(row,1,std::move(textitem));
+}
 
 
+void todo::updateTask(long long id, const std::string& text){
+    Wt::Dbo::Transaction t(session_);
+    Wt::Dbo::ptr<data> item = session_.load<data>(id);
+    if(item) item.modify() -> setText(text);
+    t.commit();
 }

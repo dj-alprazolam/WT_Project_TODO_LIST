@@ -18,6 +18,7 @@ private:
      Wt::Dbo::Session session_;
      void loaddata(Wt::WStandardItemModel* model);
      void addtask(const std::string& text, Wt::WStandardItemModel* model);
+     void updateTask(long long id, const std::string& text);
 
 };
 
