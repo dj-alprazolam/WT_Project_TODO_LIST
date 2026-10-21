@@ -11,6 +11,10 @@
 #include<Wt/WLineEdit.h>
 #include<WT/Dbo/backend/Sqlite3.h>
 #include<Wt/WStandardItem.h>
+#include <Wt/WDateEdit.h>
+#include <Wt/WTimeEdit.h>
+#include <Wt/WDate.h>
+#include <Wt/WTime.h>
 #include<iostream>
 todo::todo(const Wt::WEnvironment& env) : Wt::WApplication(env),
     sqlite3_(std::make_unique<Wt::Dbo::backend::Sqlite3>("task.db")),
