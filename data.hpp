@@ -2,6 +2,7 @@
 #include<string>
 #include<Wt/Dbo/Dbo.h>
 #include<Wt/WDateTime.h>
+#include <Wt/Dbo/WtSqlTraits.h>
 
 
 class data

@@ -17,8 +17,7 @@ private:
      std::unique_ptr<Wt::Dbo::backend::Sqlite3> sqlite3_;
      Wt::Dbo::Session session_;
      void loaddata(Wt::WStandardItemModel* model);
-     void addtask(const std::string& text, Wt::WStandardItemModel* model);
-     void updateTask(long long id, const std::string& text);
-
+     void addtask(const std::string &text, Wt::WStandardItemModel *model, const Wt::WDateTime &deadline);
+     void updateTask(long long id, const std::string &text);
 };
 
