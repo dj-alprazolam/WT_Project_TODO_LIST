@@ -1,24 +1,24 @@
-#include"todo.hpp"
-#include"data.hpp"
-#include<Wt/WBootstrapTheme.h>
-#include<Wt/WContainerWidget.h>
-#include<Wt/WPushButton.h>
-#include<Wt/WTableView.h>
-#include<Wt/WText.h>
-#include<Wt/WHBoxLayout.h>
-#include<Wt/WLength.h>
-#include<Wt/WStandardItemModel.h>
-#include<Wt/WLineEdit.h>
-#include<WT/Dbo/backend/Sqlite3.h>
-#include<Wt/WStandardItem.h>
+#include "todo.hpp"
+#include "data.hpp"
+#include <Wt/WBootstrapTheme.h>
+#include <Wt/WContainerWidget.h>
+#include <Wt/WPushButton.h>
+#include <Wt/WTableView.h>
+#include <Wt/WText.h>
+#include <Wt/WHBoxLayout.h>
+#include <Wt/WLength.h>
+#include <Wt/WStandardItemModel.h>
+#include <Wt/WLineEdit.h>
+#include <Wt/Dbo/backend/Sqlite3.h>
+#include <Wt/WStandardItem.h>
 #include <Wt/WDateEdit.h>
 #include <Wt/WTimeEdit.h>
 #include <Wt/WDate.h>
 #include <Wt/WTime.h>
-#include<iostream>
-todo::todo(const Wt::WEnvironment& env) : Wt::WApplication(env),
-    sqlite3_(std::make_unique<Wt::Dbo::backend::Sqlite3>("task.db")),
-    session_() 
+#include <iostream>
+todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
+                                          sqlite3_(std::make_unique<Wt::Dbo::backend::Sqlite3>("task.db")),
+                                          session_()
 {
 
     session_.setConnection(std::move(sqlite3_));
@@ -28,30 +28,30 @@ todo::todo(const Wt::WEnvironment& env) : Wt::WApplication(env),
     {
         session_.createTables();
     }
-    catch(const std::exception& e)
+    catch (const std::exception &e)
     {
         std::cerr << e.what() << '\n';
     }
-    
+
     setTitle("TODO LIST");
     setTheme(std::make_shared<Wt::WBootstrapTheme>());
-    useStyleSheet("todo.css");     
+    useStyleSheet("todo.css");
 
-    auto* root = this->root();
+    auto *root = this->root();
     root->setStyleClass("todo-app");
     root->setPadding(20);
 
-    auto* title = root->addWidget(std::make_unique<Wt::WText>("Список задач"));
+    auto *title = root->addWidget(std::make_unique<Wt::WText>("Список задач"));
     title->setTextFormat(Wt::TextFormat::UnsafeXHTML);
     title->setStyleClass("todo-title");
 
     auto model = std::make_shared<Wt::WStandardItemModel>(0, 4);
-    model->setHeaderData(0, Wt::Orientation::Horizontal, std::string("Добавить"));
+    model->setHeaderData(0, Wt::Orientation::Horizontal, std::string("Готово"));
     model->setHeaderData(1, Wt::Orientation::Horizontal, std::string("Задача"));
-    model->setHeaderData(2, Wt::Orientation::Horizontal, std::string("Созадана"));
+    model->setHeaderData(2, Wt::Orientation::Horizontal, std::string("Создана"));
     model->setHeaderData(3, Wt::Orientation::Horizontal, std::string("Дедлайн"));
 
-    auto* table = root->addWidget(std::make_unique<Wt::WTableView>());
+    auto *table = root->addWidget(std::make_unique<Wt::WTableView>());
     table->addStyleClass("todo-table");
     table->setModel(model);
     model->itemChanged().connect([this](Wt::WStandardItem *item)
@@ -73,39 +73,51 @@ todo::todo(const Wt::WEnvironment& env) : Wt::WApplication(env),
 
         updateTask(id, newText);
     } });
-    table->setWidth(Wt::WLength(750));
+
+    constexpr int colW[4] = {60, 400, 150, 150};
+    constexpr int cellPad = 7;
+    constexpr int scrollBar = 20;
+    int total = 0;
+    for (int i = 0; i < 4; ++i)
+    {
+        table->setColumnWidth(i, Wt::WLength(colW[i]));
+        total += colW[i] + cellPad;
+    }
+    const int tableWidth = total + scrollBar;
+
+    table->setWidth(Wt::WLength(tableWidth));
     table->setHeight(Wt::WLength(400));
-    table->setColumnWidth(0, Wt::WLength(40));   
-    table->setColumnWidth(1, Wt::WLength(430)); 
-    table->setColumnWidth(2, Wt::WLength(140));  
-    table->setColumnWidth(3, Wt::WLength(140)); 
-    table->setColumnWidth(4, Wt::WLength::Auto);
-    table->setHeaderHeight(Wt::WLength(40)); 
+    table->setHeaderHeight(Wt::WLength(40));
     table->setRowHeight(Wt::WLength(35));
+    table->setAlternatingRowColors(true);
 
     loaddata(model.get());
 
-    auto* inputRow = root->addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto *inputRow = root->addWidget(std::make_unique<Wt::WContainerWidget>());
     inputRow->setStyleClass("todo-input");
     inputRow->setMargin(Wt::WLength(20), Wt::Side::Top);
-    auto* inputLayout = inputRow->setLayout(std::make_unique<Wt::WHBoxLayout>());
+    inputRow->setWidth(Wt::WLength(tableWidth)); // та же ширина, что у таблицы
+    auto *inputLayout = inputRow->setLayout(std::make_unique<Wt::WHBoxLayout>());
+    inputLayout->setContentsMargins(0, 0, 0, 0);
 
-    auto* dataEdit = inputLayout->addWidget(std::make_unique<Wt::WDateEdit>());
+    auto *dataEdit = inputLayout->addWidget(std::make_unique<Wt::WDateEdit>());
     dataEdit->setDate(Wt::WDate::currentDate());
     dataEdit->setFormat("dd.MM.yyyy");
+    dataEdit->setWidth(Wt::WLength(120));
 
     auto *timeEdit = inputLayout->addWidget(std::make_unique<Wt::WTimeEdit>());
     timeEdit->setTime(Wt::WTime::currentTime());
     timeEdit->setFormat("HH:mm");
+    timeEdit->setWidth(Wt::WLength(80));
 
-    auto* lineEdit = inputLayout->addWidget(std::make_unique<Wt::WLineEdit>());
+    auto *lineEdit = inputLayout->addWidget(std::make_unique<Wt::WLineEdit>());
     lineEdit->setPlaceholderText("Введите новую задачу");
-    lineEdit->addStyleClass("task-input"); 
+    lineEdit->addStyleClass("task-input");
     inputLayout->setStretchFactor(lineEdit, 1);
 
-    auto* addBtn = inputLayout->addWidget(std::make_unique<Wt::WPushButton>("Добавить"));
+    auto *addBtn = inputLayout->addWidget(std::make_unique<Wt::WPushButton>("Добавить"));
     addBtn->addStyleClass("add");
-    addBtn->addStyleClass("btn btn-primary ms-2"); 
+    addBtn->addStyleClass("btn btn-primary ms-2");
 
     auto addHandler = [this, lineEdit, timeEdit, dataEdit, model]()
     {
@@ -120,23 +132,22 @@ todo::todo(const Wt::WEnvironment& env) : Wt::WApplication(env),
 
     addBtn->clicked().connect(addHandler);
     lineEdit->enterPressed().connect(addHandler);
-
 }
 
-void todo::loaddata(Wt::WStandardItemModel* model){
-        model->removeRows(0,model->rowCount());
-        Wt::Dbo::Transaction t(session_);
-        auto items = session_.find<data>().orderBy("id").resultList();
-        for (const auto& item : items)
-        {  int row = model->rowCount();
-           model ->insertRow(row);
-            
-        
+void todo::loaddata(Wt::WStandardItemModel *model)
+{
+    model->removeRows(0, model->rowCount());
+    Wt::Dbo::Transaction t(session_);
+    auto items = session_.find<data>().orderBy("id").resultList();
+    for (const auto &item : items)
+    {
+        int row = model->rowCount();
+        model->insertRow(row);
 
         auto checkitem = std::make_unique<Wt::WStandardItem>();
         checkitem->setCheckable(true);
-        checkitem->setCheckState(item->getComple() ? Wt::CheckState::Checked 
-                                                  : Wt::CheckState::Unchecked);
+        checkitem->setCheckState(item->getComple() ? Wt::CheckState::Checked
+                                                   : Wt::CheckState::Unchecked);
         checkitem->setData(item.id(), Wt::ItemDataRole::User);
         model->setItem(row, 0, std::move(checkitem));
 
@@ -153,10 +164,11 @@ void todo::loaddata(Wt::WStandardItemModel* model){
         auto deadlineItem = std::make_unique<Wt::WStandardItem>(deadlinestr);
         deadlineItem->setEditable(false);
         model->setItem(row, 3, std::move(deadlineItem));
-        }
+    }
 }
 
-void todo::addtask(const std::string& text, Wt::WStandardItemModel* model, const Wt::WDateTime& deadline){
+void todo::addtask(const std::string &text, Wt::WStandardItemModel *model, const Wt::WDateTime &deadline)
+{
     Wt::Dbo::Transaction t(session_);
 
     auto item = std::make_unique<data>();
@@ -164,7 +176,6 @@ void todo::addtask(const std::string& text, Wt::WStandardItemModel* model, const
     item->setComple(false);
     item->setcreate(Wt::WDateTime::currentDateTime());
     item->setdeadline(deadline);
-
 
     Wt::Dbo::ptr<data> ptr = session_.add(std::move(item));
 
@@ -176,28 +187,29 @@ void todo::addtask(const std::string& text, Wt::WStandardItemModel* model, const
     auto checkitem = std::make_unique<Wt::WStandardItem>();
     checkitem->setCheckable(true);
     checkitem->setCheckState(Wt::CheckState::Unchecked);
-    checkitem->setData(ptr.id(),Wt::ItemDataRole::User);
-    model->setItem(row,0,std::move(checkitem));
+    checkitem->setData(ptr.id(), Wt::ItemDataRole::User);
+    model->setItem(row, 0, std::move(checkitem));
 
     auto textitem = std::make_unique<Wt::WStandardItem>(text);
     textitem->setEditable(true);
-    model->setItem(row,1,std::move(textitem));
+    model->setItem(row, 1, std::move(textitem));
 
     auto createItem = std::make_unique<Wt::WStandardItem>(ptr->getcreate().toString("dd.MM.yyyy HH:mm"));
     createItem->setEditable(false);
-    model->setItem(row,2,std::move(createItem));
+    model->setItem(row, 2, std::move(createItem));
 
-    std::string deadlinestr = ptr->getdeadline().isValid() ? ptr->getdeadline().toString("dd.MM.yyyy HH:mm").toUTF8(): "-";
+    std::string deadlinestr = ptr->getdeadline().isValid() ? ptr->getdeadline().toString("dd.MM.yyyy HH:mm").toUTF8() : "-";
 
     auto deadlineItem = std::make_unique<Wt::WStandardItem>(deadlinestr);
     deadlineItem->setEditable(false);
     model->setItem(row, 3, std::move(deadlineItem));
 }
 
-
-void todo::updateTask(long long id, const std::string& text){
+void todo::updateTask(long long id, const std::string &text)
+{
     Wt::Dbo::Transaction t(session_);
     Wt::Dbo::ptr<data> item = session_.load<data>(id);
-    if(item) item.modify() -> setText(text);
+    if (item)
+        item.modify()->setText(text);
     t.commit();
 }
