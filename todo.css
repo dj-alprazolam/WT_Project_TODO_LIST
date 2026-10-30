@@ -197,3 +197,18 @@ body {
     color: var(--text);
     border: 1px solid var(--pink);
 }
+
+/* ===== Кнопка удаления (крестик) ===== */
+.todo-table td:last-child {
+    text-align: center;
+    color: var(--text-muted);
+    font-weight: bold;
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.2s, transform 0.2s;
+}
+
+.todo-table td:last-child:hover {
+    color: var(--pink); /* При наведении становится кислотно-розовым */
+    transform: scale(1.2); /* Немного увеличивается */
+}

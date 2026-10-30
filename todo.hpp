@@ -19,5 +19,6 @@ private:
      void loaddata(Wt::WStandardItemModel* model);
      void addtask(const std::string &text, Wt::WStandardItemModel *model, const Wt::WDateTime &deadline);
      void updateTask(long long id, const std::string &text);
+     void deleteTask(long long id, int row, Wt::WStandardItemModel *model);
 };
 

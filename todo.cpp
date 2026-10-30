@@ -50,6 +50,7 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
     model->setHeaderData(1, Wt::Orientation::Horizontal, std::string("Задача"));
     model->setHeaderData(2, Wt::Orientation::Horizontal, std::string("Создана"));
     model->setHeaderData(3, Wt::Orientation::Horizontal, std::string("Дедлайн"));
+    model->setHeaderData(4,Wt::Orientation::Horizontal, std::string(""));
 
     auto *table = root->addWidget(std::make_unique<Wt::WTableView>());
     table->addStyleClass("todo-table");
@@ -74,11 +75,28 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
         updateTask(id, newText);
     } });
 
+    table->clicked().connect([this, model](const Wt::WModelIndex &index)
+                             {
+                                 if (!index.isValid() || index.column() != 4)
+                                     return; 
+
+                                 int row = index.row();
+                                 auto *idItem = model->item(row, 0); 
+                                 if (!idItem)
+                                     return;
+
+                                 long long id = std::any_cast<long long>(idItem->data(Wt::ItemDataRole::User));
+                                 if (id == 0)
+                                     return;
+
+                                 deleteTask(id, row, model.get()); 
+                             });
+
     constexpr int colW[4] = {60, 400, 150, 150};
     constexpr int cellPad = 7;
     constexpr int scrollBar = 20;
     int total = 0;
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 5; ++i)
     {
         table->setColumnWidth(i, Wt::WLength(colW[i]));
         total += colW[i] + cellPad;
@@ -96,7 +114,7 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
     auto *inputRow = root->addWidget(std::make_unique<Wt::WContainerWidget>());
     inputRow->setStyleClass("todo-input");
     inputRow->setMargin(Wt::WLength(20), Wt::Side::Top);
-    inputRow->setWidth(Wt::WLength(tableWidth)); // та же ширина, что у таблицы
+    inputRow->setWidth(Wt::WLength(tableWidth));
     auto *inputLayout = inputRow->setLayout(std::make_unique<Wt::WHBoxLayout>());
     inputLayout->setContentsMargins(0, 0, 0, 0);
 
@@ -164,6 +182,10 @@ void todo::loaddata(Wt::WStandardItemModel *model)
         auto deadlineItem = std::make_unique<Wt::WStandardItem>(deadlinestr);
         deadlineItem->setEditable(false);
         model->setItem(row, 3, std::move(deadlineItem));
+
+        auto deleteItem = std::make_unique<Wt::WStandardItem>("✖");
+        deleteItem->setEditable(false);
+        model->setItem(row, 4, std::move(deleteItem));
     }
 }
 
@@ -203,6 +225,10 @@ void todo::addtask(const std::string &text, Wt::WStandardItemModel *model, const
     auto deadlineItem = std::make_unique<Wt::WStandardItem>(deadlinestr);
     deadlineItem->setEditable(false);
     model->setItem(row, 3, std::move(deadlineItem));
+
+    auto deleteItem = std::make_unique<Wt::WStandardItem>("✖");
+    deleteItem->setEditable(false);
+    model->setItem(row, 4, std::move(deleteItem));
 }
 
 void todo::updateTask(long long id, const std::string &text)
@@ -212,4 +238,18 @@ void todo::updateTask(long long id, const std::string &text)
     if (item)
         item.modify()->setText(text);
     t.commit();
+}
+
+void todo::deleteTask(long long id, int row, Wt::WStandardItemModel *model)
+{  
+    {
+        Wt::Dbo::Transaction t(session_);
+        Wt::Dbo::ptr<data> item = session_.load<data>(id);
+        if(item){
+            item.remove();
+        }
+        t.commit();
+    }
+    model->removeRow(row);
+
 }
