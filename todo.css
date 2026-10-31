@@ -1,4 +1,3 @@
-/* ===== TODO LIST — серый + кислотно-розовый ===== */
 
 :root {
     --bg-dark: #1c1c20;
@@ -22,23 +21,21 @@ body {
 }
 
 
-/* Карточка приложения.
-   Ширина под таблицу: колонки 60+400+150+150 + отступы + скролл ≈ 808px */
 
 .todo-app {
     box-sizing: border-box;
-    max-width: 880px;
+    max-width: 920px;
     margin: 40px auto;
     padding: 28px 28px 24px;
     background: var(--card);
     border-radius: 16px;
     border: 1px solid var(--line);
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55),
-        0 0 0 1px rgba(255, 46, 147, 0.08);
+                0 0 0 1px rgba(255, 46, 147, 0.08);
 }
 
 
-/* Заголовок */
+
 
 .todo-title {
     display: block;
@@ -53,7 +50,7 @@ body {
 }
 
 
-/* Таблица */
+
 
 .todo-table {
     border: 1px solid var(--line);
@@ -88,7 +85,7 @@ body {
     border-color: var(--line);
 }
 
-/* чередование строк */
+
 .todo-table .Wt-tv-row:nth-child(even),
 .todo-table .Wt-tv-c:nth-child(even) {
     background: rgba(255, 255, 255, 0.03);
@@ -99,7 +96,7 @@ body {
     background: rgba(255, 46, 147, 0.12);
 }
 
-/* выбранная строка */
+
 .todo-table .Wt-selected,
 .todo-table .Wt-selected td {
     background: rgba(255, 46, 147, 0.25) !important;
@@ -113,7 +110,7 @@ body {
     accent-color: var(--pink);
 }
 
-/* поле при редактировании ячейки */
+
 .todo-table input[type="text"] {
     background: var(--card-soft);
     color: var(--text);
@@ -122,7 +119,22 @@ body {
 }
 
 
-/* Строка ввода */
+
+
+.todo-del {
+    color: var(--pink);
+    text-align: center;
+    cursor: pointer;
+    font-weight: 700;
+    transition: color 0.15s, text-shadow 0.15s;
+}
+
+.todo-del:hover {
+    color: #fff;
+    text-shadow: 0 0 10px var(--pink);
+}
+
+
 
 .todo-input {
     padding: 0;
@@ -154,7 +166,7 @@ body {
 }
 
 
-/* Кнопка "Добавить" */
+
 
 .btn.add,
 .add {
@@ -172,6 +184,7 @@ body {
     transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
 }
 
+
 .btn.add:hover,
 .add:hover {
     transform: translateY(-1px);
@@ -187,28 +200,10 @@ body {
 }
 
 
-/* Календарь/выпадашки Bootstrap-темы в тёмной палитре */
-
-
 .Wt-popup,
 .Wt-datepicker,
 .Wt-timepicker {
     background: var(--card-soft);
     color: var(--text);
     border: 1px solid var(--pink);
-}
-
-/* ===== Кнопка удаления (крестик) ===== */
-.todo-table td:last-child {
-    text-align: center;
-    color: var(--text-muted);
-    font-weight: bold;
-    font-size: 18px;
-    cursor: pointer;
-    transition: color 0.2s, transform 0.2s;
-}
-
-.todo-table td:last-child:hover {
-    color: var(--pink); /* При наведении становится кислотно-розовым */
-    transform: scale(1.2); /* Немного увеличивается */
 }

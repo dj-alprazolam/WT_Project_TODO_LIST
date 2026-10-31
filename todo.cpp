@@ -45,12 +45,14 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
     title->setTextFormat(Wt::TextFormat::UnsafeXHTML);
     title->setStyleClass("todo-title");
 
-    auto model = std::make_shared<Wt::WStandardItemModel>(0, 4);
+    constexpr int COLS = 5;
+
+    auto model = std::make_shared<Wt::WStandardItemModel>(0, COLS);
     model->setHeaderData(0, Wt::Orientation::Horizontal, std::string("Готово"));
     model->setHeaderData(1, Wt::Orientation::Horizontal, std::string("Задача"));
     model->setHeaderData(2, Wt::Orientation::Horizontal, std::string("Создана"));
     model->setHeaderData(3, Wt::Orientation::Horizontal, std::string("Дедлайн"));
-    model->setHeaderData(4,Wt::Orientation::Horizontal, std::string(""));
+    model->setHeaderData(4, Wt::Orientation::Horizontal, std::string(""));
 
     auto *table = root->addWidget(std::make_unique<Wt::WTableView>());
     table->addStyleClass("todo-table");
@@ -75,13 +77,15 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
         updateTask(id, newText);
     } });
 
-    table->clicked().connect([this, model](const Wt::WModelIndex &index)
+    // сырой указатель, чтобы лямбда не держала shared_ptr на модель
+    auto *rawModel = model.get();
+    table->clicked().connect([this, rawModel](const Wt::WModelIndex &index, const Wt::WMouseEvent &)
                              {
                                  if (!index.isValid() || index.column() != 4)
-                                     return; 
+                                     return;
 
                                  int row = index.row();
-                                 auto *idItem = model->item(row, 0); 
+                                 auto *idItem = rawModel->item(row, 0);
                                  if (!idItem)
                                      return;
 
@@ -89,14 +93,14 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
                                  if (id == 0)
                                      return;
 
-                                 deleteTask(id, row, model.get()); 
-                             });
+                                 deleteTask(id, row, rawModel); });
 
-    constexpr int colW[4] = {60, 400, 150, 150};
+    // ширины колонок без учёта отступов ячеек (по одному значению на колонку!)
+    constexpr int colW[COLS] = {60, 380, 150, 150, 50};
     constexpr int cellPad = 7;
     constexpr int scrollBar = 20;
     int total = 0;
-    for (int i = 0; i < 5; ++i)
+    for (int i = 0; i < COLS; ++i)
     {
         table->setColumnWidth(i, Wt::WLength(colW[i]));
         total += colW[i] + cellPad;
@@ -137,13 +141,13 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
     addBtn->addStyleClass("add");
     addBtn->addStyleClass("btn btn-primary ms-2");
 
-    auto addHandler = [this, lineEdit, timeEdit, dataEdit, model]()
+    auto addHandler = [this, lineEdit, timeEdit, dataEdit, rawModel]()
     {
         std::string text = lineEdit->text().toUTF8();
         if (text.empty())
             return;
         Wt::WDateTime deadline(dataEdit->date(), timeEdit->time());
-        addtask(text, model.get(), deadline);
+        addtask(text, rawModel, deadline);
         lineEdit->setText("");
         lineEdit->setFocus();
     };
@@ -183,8 +187,9 @@ void todo::loaddata(Wt::WStandardItemModel *model)
         deadlineItem->setEditable(false);
         model->setItem(row, 3, std::move(deadlineItem));
 
-        auto deleteItem = std::make_unique<Wt::WStandardItem>("✖");
+        auto deleteItem = std::make_unique<Wt::WStandardItem>("✖️");
         deleteItem->setEditable(false);
+        deleteItem->setStyleClass("todo-del");
         model->setItem(row, 4, std::move(deleteItem));
     }
 }
@@ -226,8 +231,9 @@ void todo::addtask(const std::string &text, Wt::WStandardItemModel *model, const
     deadlineItem->setEditable(false);
     model->setItem(row, 3, std::move(deadlineItem));
 
-    auto deleteItem = std::make_unique<Wt::WStandardItem>("✖");
+    auto deleteItem = std::make_unique<Wt::WStandardItem>("✖️");
     deleteItem->setEditable(false);
+    deleteItem->setStyleClass("todo-del");
     model->setItem(row, 4, std::move(deleteItem));
 }
 
@@ -241,15 +247,15 @@ void todo::updateTask(long long id, const std::string &text)
 }
 
 void todo::deleteTask(long long id, int row, Wt::WStandardItemModel *model)
-{  
+{
     {
         Wt::Dbo::Transaction t(session_);
         Wt::Dbo::ptr<data> item = session_.load<data>(id);
-        if(item){
+        if (item)
+        {
             item.remove();
         }
         t.commit();
     }
     model->removeRow(row);
-
 }
