@@ -77,7 +77,6 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
         updateTask(id, newText);
     } });
 
-    // сырой указатель, чтобы лямбда не держала shared_ptr на модель
     auto *rawModel = model.get();
     table->clicked().connect([this, rawModel](const Wt::WModelIndex &index, const Wt::WMouseEvent &)
                              {
@@ -95,7 +94,6 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
 
                                  deleteTask(id, row, rawModel); });
 
-    // ширины колонок без учёта отступов ячеек (по одному значению на колонку!)
     constexpr int colW[COLS] = {60, 380, 150, 150, 50};
     constexpr int cellPad = 7;
     constexpr int scrollBar = 20;
