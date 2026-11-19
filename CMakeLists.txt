@@ -13,9 +13,23 @@ find_package(Wt REQUIRED COMPONENTS
 
 add_executable(todo_wt 
     main.cpp 
-    todo.cpp
-    data.hpp
+    src/todo.cpp
+    includes/operation.hpp
+    includes/LoadData.hpp
+    src/LoadData.cpp
+    src/row_worker.cpp
+    includes/row_worker.hpp
+    includes/add_task.hpp
+    src/add_task.cpp
+    includes/delete_task.hpp
+    src/delete_task.cpp
+    includes/update_task.hpp
+    src/update_task.cpp
+    includes/completed_task.hpp
+    src/completed_task.cpp
 )
+
+target_include_directories(todo_wt PRIVATE ${CMAKE_SOURCE_DIR}/includes)
 
 target_link_libraries(todo_wt PRIVATE 
     Wt::Wt 

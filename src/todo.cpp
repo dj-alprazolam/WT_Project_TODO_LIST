@@ -85,7 +85,7 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
 
                                  int row = index.row();
                                  auto *idItem = rawModel->item(row, 0);
-                                 if (!idItem)
+                                 if (!idItem)   
                                      return;
 
                                  long long id = std::any_cast<long long>(idItem->data(Wt::ItemDataRole::User));
