@@ -24,14 +24,12 @@ private:
      std::unique_ptr<Wt::Dbo::backend::Sqlite3> sqlite3_;
      Wt::Dbo::Session session_;
 
-     // стратегии (каждая операция в своём классе)
      std::unique_ptr<TaskOperations> loadData_;
      std::unique_ptr<TaskOperations> addTask_;
      std::unique_ptr<TaskOperations> updateTask_;
      std::unique_ptr<TaskOperations> deleteTask_;
      std::unique_ptr<TaskOperations> completedTask_;
 
-     // прежние методы, теперь только вызывают стратегии
      void loaddata(Wt::WStandardItemModel *model);
      void addtask(const std::string &text, Wt::WStandardItemModel *model, const Wt::WDateTime &deadline);
      void updateTask(long long id, const std::string &text);

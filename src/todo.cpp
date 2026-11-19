@@ -69,7 +69,6 @@
     table->addStyleClass("todo-table");
     table->setModel(model);
 
-    // правка текста (колонка 1) и отметка «Готово» (колонка 0)
     model->itemChanged().connect([this](Wt::WStandardItem *item)
                                  {
 if (item->column() != 0 && item->column() != 1)
@@ -185,7 +184,6 @@ void todo::addtask(const std::string &text, Wt::WStandardItemModel *model, const
 
 void todo::updateTask(long long id, const std::string &text)
 {
-    // модель для обновления не нужна, но TaskContext требует ссылку на неё
     Wt::WStandardItemModel dummy;
     TaskContext ctt(session_, dummy);
     ctt.setId(id).setText(text);
