@@ -1,5 +1,10 @@
 #include "todo.hpp"
 #include "data.hpp"
+#include "LoadData.hpp"
+#include "add_task.hpp"
+#include "update_task.hpp"
+#include "delete_task.hpp"
+#include "completed_task.hpp"
 #include <Wt/WBootstrapTheme.h>
 #include <Wt/WContainerWidget.h>
 #include <Wt/WPushButton.h>
@@ -15,10 +20,16 @@
 #include <Wt/WTimeEdit.h>
 #include <Wt/WDate.h>
 #include <Wt/WTime.h>
+#include <any>
 #include <iostream>
-todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
-                                          sqlite3_(std::make_unique<Wt::Dbo::backend::Sqlite3>("task.db")),
-                                          session_()
+                            todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
+                                                                      sqlite3_(std::make_unique<Wt::Dbo::backend::Sqlite3>("task.db")),
+                                                                      session_(),
+                                                                      loadData_(std::make_unique<LoadData>()),
+                                                                      addTask_(std::make_unique<add_task>()),
+                                                                      updateTask_(std::make_unique<UpdateTask>()),
+                                                                      deleteTask_(std::make_unique<delete_task>()),
+                                                                      completedTask_(std::make_unique<completed_task>())
 {
 
     session_.setConnection(std::move(sqlite3_));
@@ -57,42 +68,48 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
     auto *table = root->addWidget(std::make_unique<Wt::WTableView>());
     table->addStyleClass("todo-table");
     table->setModel(model);
+
+    // правка текста (колонка 1) и отметка «Готово» (колонка 0)
     model->itemChanged().connect([this](Wt::WStandardItem *item)
                                  {
-    if (item->column() == 1) {
+if (item->column() != 0 && item->column() != 1)
+    return;
 
-        auto* model = dynamic_cast<Wt::WStandardItemModel*>(item->model());
-        if (!model) return;
+auto* model = dynamic_cast<Wt::WStandardItemModel*>(item->model());
+if (!model) return;
 
-        auto* idItem = model->item(item->row(), 0);
-        if (!idItem) return;
+auto* idItem = model->item(item->row(), 0);
+if (!idItem) return;
 
-        long long id = std::any_cast<long long>(
-            idItem->data(Wt::ItemDataRole::User));
-        if (id == 0) return;
+long long id = std::any_cast<long long>(
+    idItem->data(Wt::ItemDataRole::User));
+if (id == 0) return;
 
-        std::string newText = item->text().toUTF8();
-        if (newText.empty()) return;
+if (item->column() == 1) {
+    std::string newText = item->text().toUTF8();
+    if (newText.empty()) return;
 
-        updateTask(id, newText);
-    } });
+    updateTask(id, newText);
+} else {
+    completedTask(id, item->checkState() == Wt::CheckState::Checked);
+} });
 
     auto *rawModel = model.get();
     table->clicked().connect([this, rawModel](const Wt::WModelIndex &index, const Wt::WMouseEvent &)
                              {
-                                 if (!index.isValid() || index.column() != 4)
-                                     return;
+                             if (!index.isValid() || index.column() != 4)
+                                 return;
 
-                                 int row = index.row();
-                                 auto *idItem = rawModel->item(row, 0);
-                                 if (!idItem)   
-                                     return;
+                             int row = index.row();
+                             auto *idItem = rawModel->item(row, 0);
+                             if (!idItem)
+                                 return;
 
-                                 long long id = std::any_cast<long long>(idItem->data(Wt::ItemDataRole::User));
-                                 if (id == 0)
-                                     return;
+                             long long id = std::any_cast<long long>(idItem->data(Wt::ItemDataRole::User));
+                             if (id == 0)
+                                 return;
 
-                                 deleteTask(id, row, rawModel); });
+                             deleteTask(id, row, rawModel); });
 
     constexpr int colW[COLS] = {60, 380, 150, 150, 50};
     constexpr int cellPad = 7;
@@ -112,7 +129,6 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
     table->setAlternatingRowColors(true);
 
     loaddata(model.get());
-
     auto *inputRow = root->addWidget(std::make_unique<Wt::WContainerWidget>());
     inputRow->setStyleClass("todo-input");
     inputRow->setMargin(Wt::WLength(20), Wt::Side::Top);
@@ -156,104 +172,37 @@ todo::todo(const Wt::WEnvironment &env) : Wt::WApplication(env),
 
 void todo::loaddata(Wt::WStandardItemModel *model)
 {
-    model->removeRows(0, model->rowCount());
-    Wt::Dbo::Transaction t(session_);
-    auto items = session_.find<data>().orderBy("id").resultList();
-    for (const auto &item : items)
-    {
-        int row = model->rowCount();
-        model->insertRow(row);
-
-        auto checkitem = std::make_unique<Wt::WStandardItem>();
-        checkitem->setCheckable(true);
-        checkitem->setCheckState(item->getComple() ? Wt::CheckState::Checked
-                                                   : Wt::CheckState::Unchecked);
-        checkitem->setData(item.id(), Wt::ItemDataRole::User);
-        model->setItem(row, 0, std::move(checkitem));
-
-        auto textitem = std::make_unique<Wt::WStandardItem>(item->getText());
-        textitem->setEditable(true);
-        model->setItem(row, 1, std::move(textitem));
-
-        auto createItem = std::make_unique<Wt::WStandardItem>(item->getcreate().toString("dd.MM.yyyy HH:mm"));
-        createItem->setEditable(false);
-        model->setItem(row, 2, std::move(createItem));
-
-        std::string deadlinestr = item->getdeadline().isValid() ? item->getdeadline().toString("dd.MM.yyyy HH:mm").toUTF8() : "-";
-
-        auto deadlineItem = std::make_unique<Wt::WStandardItem>(deadlinestr);
-        deadlineItem->setEditable(false);
-        model->setItem(row, 3, std::move(deadlineItem));
-
-        auto deleteItem = std::make_unique<Wt::WStandardItem>("✖️");
-        deleteItem->setEditable(false);
-        deleteItem->setStyleClass("todo-del");
-        model->setItem(row, 4, std::move(deleteItem));
-    }
+    TaskContext ctt(session_, *model);
+    loadData_->exe(ctt);
 }
 
 void todo::addtask(const std::string &text, Wt::WStandardItemModel *model, const Wt::WDateTime &deadline)
 {
-    Wt::Dbo::Transaction t(session_);
-
-    auto item = std::make_unique<data>();
-    item->setText(text);
-    item->setComple(false);
-    item->setcreate(Wt::WDateTime::currentDateTime());
-    item->setdeadline(deadline);
-
-    Wt::Dbo::ptr<data> ptr = session_.add(std::move(item));
-
-    t.commit();
-
-    int row = model->rowCount();
-    model->insertRow(row);
-
-    auto checkitem = std::make_unique<Wt::WStandardItem>();
-    checkitem->setCheckable(true);
-    checkitem->setCheckState(Wt::CheckState::Unchecked);
-    checkitem->setData(ptr.id(), Wt::ItemDataRole::User);
-    model->setItem(row, 0, std::move(checkitem));
-
-    auto textitem = std::make_unique<Wt::WStandardItem>(text);
-    textitem->setEditable(true);
-    model->setItem(row, 1, std::move(textitem));
-
-    auto createItem = std::make_unique<Wt::WStandardItem>(ptr->getcreate().toString("dd.MM.yyyy HH:mm"));
-    createItem->setEditable(false);
-    model->setItem(row, 2, std::move(createItem));
-
-    std::string deadlinestr = ptr->getdeadline().isValid() ? ptr->getdeadline().toString("dd.MM.yyyy HH:mm").toUTF8() : "-";
-
-    auto deadlineItem = std::make_unique<Wt::WStandardItem>(deadlinestr);
-    deadlineItem->setEditable(false);
-    model->setItem(row, 3, std::move(deadlineItem));
-
-    auto deleteItem = std::make_unique<Wt::WStandardItem>("✖️");
-    deleteItem->setEditable(false);
-    deleteItem->setStyleClass("todo-del");
-    model->setItem(row, 4, std::move(deleteItem));
+    TaskContext ctt(session_, *model);
+    ctt.setText(text).setDeadline(deadline);
+    addTask_->exe(ctt);
 }
 
 void todo::updateTask(long long id, const std::string &text)
 {
-    Wt::Dbo::Transaction t(session_);
-    Wt::Dbo::ptr<data> item = session_.load<data>(id);
-    if (item)
-        item.modify()->setText(text);
-    t.commit();
+    // модель для обновления не нужна, но TaskContext требует ссылку на неё
+    Wt::WStandardItemModel dummy;
+    TaskContext ctt(session_, dummy);
+    ctt.setId(id).setText(text);
+    updateTask_->exe(ctt);
 }
 
 void todo::deleteTask(long long id, int row, Wt::WStandardItemModel *model)
 {
-    {
-        Wt::Dbo::Transaction t(session_);
-        Wt::Dbo::ptr<data> item = session_.load<data>(id);
-        if (item)
-        {
-            item.remove();
-        }
-        t.commit();
-    }
-    model->removeRow(row);
+    TaskContext ctt(session_, *model);
+    ctt.setId(id).setRow(row);
+    deleteTask_->exe(ctt);
+}
+
+void todo::completedTask(long long id, bool comple)
+{
+    Wt::WStandardItemModel dummy;
+    TaskContext ctt(session_, dummy);
+    ctt.setId(id).setDone(comple);
+    completedTask_->exe(ctt);
 }

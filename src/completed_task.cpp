@@ -1,7 +1,7 @@
 #include"completed_task.hpp"
 #include"data.hpp"
 
-void completed_task(TaskContext& ctt){
+void completed_task::exe(TaskContext& ctt){
     Wt::Dbo::Transaction t(ctt.session());
 
     dataptr item = ctt.session().load<data>(ctt.id());
